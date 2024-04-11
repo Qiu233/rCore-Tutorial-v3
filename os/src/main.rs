@@ -33,6 +33,16 @@ pub fn clear_bss() {
     (sbss as usize..ebss as usize).for_each(|a| unsafe { (a as *mut u8).write_volatile(0) });
 }
 
+fn sleep(time: u64) {
+    extern "C" {
+        fn wait_STIP();
+    }
+    sbi_rt::set_timer(time);
+    unsafe {
+        wait_STIP();
+    }
+}
+
 /// the rust entry-point of os
 #[no_mangle]
 pub fn rust_main() -> ! {
@@ -50,6 +60,7 @@ pub fn rust_main() -> ! {
     }
     clear_bss();
     logging::init();
+    sleep(50_000_000);
     println!("[kernel] Hello, world!");
     trace!(
         "[kernel] .text [{:#x}, {:#x})",
