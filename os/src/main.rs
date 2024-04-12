@@ -43,6 +43,37 @@ fn sleep(time: u64) {
     }
 }
 
+// jump from function `thread_1_entry` in entry.asm
+#[no_mangle]
+fn thread_1_main(hartid: usize/*, opaque: usize*/) -> ! {
+    info!("[kernel] Running from another thread, hartid = {}", hartid);
+    loop {}
+}
+
+// holds the booting hart
+static mut BOOT_HART: usize = 0;
+
+fn start_one_hart() {
+    extern "C" {
+        fn thread_1_entry();
+    }
+    unsafe {
+        for i in 0..10 { // find the first available hartid
+            if i == BOOT_HART {
+                continue;
+            }
+            let result: sbi_rt::SbiRet = sbi_rt::hart_start(i as usize, thread_1_entry as usize, 0);
+            if result.is_ok() {
+                info!("[kernel] Successfully started hart #{:x}H.", i);
+                break;
+            } else {
+                error!("[kernel] Failed to started hart #{:x}H: err= {}", i, result.error as isize)
+            }
+        }
+    }
+}
+
+
 /// the rust entry-point of os
 #[no_mangle]
 pub fn rust_main() -> ! {
@@ -58,8 +89,15 @@ pub fn rust_main() -> ! {
         fn boot_stack_lower_bound(); // stack lower bound
         fn boot_stack_top(); // stack top
     }
-    clear_bss();
+    let mut boot_hart;
+    unsafe {
+        core::arch::asm!("mv {}, a0", out(reg) boot_hart);
+    }
+    clear_bss(); // this will clear BOOT_HART, so it must be set after this
+    unsafe { BOOT_HART = boot_hart; }
     logging::init();
+    start_one_hart();
+    println!("Sleep test. Waiting for 5 seconds...");
     sleep(50_000_000);
     println!("[kernel] Hello, world!");
     trace!(

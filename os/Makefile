@@ -14,6 +14,7 @@ endif
 BOARD := qemu
 SBI ?= rustsbi
 BOOTLOADER := ../bootloader/$(SBI)-$(BOARD).bin
+SMP ?= 2
 
 # KERNEL ENTRY
 KERNEL_ENTRY_PA := 0x80200000
@@ -58,6 +59,7 @@ run: run-inner
 QEMU_ARGS := -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
+			 -smp $(SMP) \
 			 -device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 
 run-inner: build

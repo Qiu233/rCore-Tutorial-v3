@@ -5,6 +5,14 @@ _start:
     call rust_main
 
     .section .bss.stack
+
+    # thread 1 stack space
+    .globl thread_1_stack_lower_bound
+thread_1_stack_lower_bound:
+    .space 4096 * 16
+    .globl thread_1_stack_top
+thread_1_stack_top:
+
     .globl boot_stack_lower_bound
 boot_stack_lower_bound:
     .space 4096 * 16
@@ -23,3 +31,9 @@ wait_STIP:
     beqz t2, .loop
     csrrw a0, sie, t0
     ret
+    
+    # thread 1 entry point
+    .global thread_1_entry
+thread_1_entry:
+    la sp, thread_1_stack_top
+    call thread_1_main
